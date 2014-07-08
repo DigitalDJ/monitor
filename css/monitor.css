@@ -1,0 +1,120 @@
+#log-template
+{
+    display : none;
+}
+
+#service-template
+{
+    display : none;
+}
+
+#text-template
+{
+    display : none;
+}
+
+#progressbar-template
+{
+    display : none;
+}
+
+#panel-template
+{
+    display : none;
+}
+
+#column-template
+{
+    display : none;
+}
+
+.inline
+{
+    display : inline-block;
+}
+
+.hide-overflow
+{
+    overflow : hidden;
+}
+
+.panel-footer-padding
+{
+    padding-top : 5px;
+    padding-bottom : 5px;
+}
+
+.loading
+{
+    display : none;
+    margin-bottom : 0;
+}
+
+.loading-bar
+{
+    width : 0%;
+}
+
+.time
+{
+    text-align : left;
+    float : left;
+    display : none;
+}
+
+.refresh
+{
+    text-align : right;
+}
+
+.refresh-small
+{
+    width : 18px; 
+    height : 16px;
+}
+
+.refresh-all-align
+{
+    vertical-align : top;
+    float : right;
+}
+
+.refresh-all
+{
+    width : 70px;
+    height : 70px;
+}
+
+.progress
+{
+    margin-bottom : 0
+}
+
+.panel-body
+{
+    padding-top : 10px;
+    padding-bottom : 10px;
+}
+
+.progressbar-label
+{
+    float : left;
+    margin-top : 2px;
+    margin-right : 5px;
+}
+
+.progressbar-padding
+{
+    margin-top : 5px;
+    margin-bottom : 5px;
+}
+
+.panel-body-text
+{
+    margin-top : 2px;
+}
+
+.arbitrary-text
+{
+    font-size : x-small;
+}

@@ -1,0 +1,68 @@
+{
+  "localhost": {
+    "hostname": "localhost.local",
+    "hostCanBeDown": 3600,
+    "monitors": {
+      "rsync-backup": {
+        "type": "log",
+        "success": [],
+        "failure": [
+          "rsync error",
+          "rsync warning"
+        ],
+        "staleAfter": 86400
+      },
+      "windows-backup": {
+        "type": "log",
+        "success": [ "The backup operation successfully completed" ],
+        "failure": [ ],
+        "staleAfter": 86400
+      },
+      "ssh": {
+        "type": "service",
+        "port": 22,
+        "protocol": "tcp"
+      },
+      "ping": {
+        "type": "service",
+        "protocol": "icmp"
+      },
+      "http": {
+        "type": "service",    
+        "protocol": "http",
+        "port": 80,             
+        "path": "/",             
+        "success": [ "It works!" ],
+        "failure": [ "500 Internal Server Error" ]
+      },
+      "disk-via-log": {
+        "type": "progressbar",
+        "staleAfter": 3600,
+        "warning": 60,
+        "danger": 80
+      },
+      "disk-via-get": {
+        "type": "progressbar",
+        "protocol": "http",
+        "port": 80,             
+        "path": "/diskusage",             
+        "warning": 60,
+        "danger": 80
+      },
+      "uptime": {
+        "type" : "text",
+        "newLine": true,
+        "staleAfter": 86400
+      },
+      "secured-information": {
+        "type" : "text",
+        "newLine": false,
+        "protocol": "https",
+        "port": 443,             
+        "path": "/secure",             
+        "credentials": "username:password",
+        "sslVerifyPeer": true
+      }
+    }
+  }
+}

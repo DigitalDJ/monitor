@@ -1,0 +1,4 @@
+monitor
+=======
+
+A Monitoring Panel

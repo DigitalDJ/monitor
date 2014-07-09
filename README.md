@@ -22,6 +22,8 @@ For example, if host *localhost* has log *backup* in the configuration JSON, the
 
 Download and extract the *css*, *fonts* and *js* directories from Bootstrap into Monitor's directory. Additionally, add the jQuery, html5shiv and Respond.js JS files into the *js* folder.
 
+If you want iCloud support to work, you must generate a ca-bundle for cURL and place it in the same directory as Monitor as *ca-bundle.crt*
+
 Version
 -------
 0.1
@@ -161,6 +163,14 @@ JSON cannot contain comments. They are provided only for explanation.
                 // the conditions below will determine the colour the label that is directly above the text
                 "staleAfter": 3600,
                 "failure": [ "command not found" ]
+            },
+            "icloud":
+            {
+                "type": "icloud",
+                "staleAfter": 3600,
+                // the uuid, product type (iPhoneX,X) or full name of your device
+                "deviceName": "Joe's iPhone",
+                "credentials": "your@appleid.com:password"
             }
         }
     }

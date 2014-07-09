@@ -1,9 +1,32 @@
 <?php
     header("Content-Type: application/json; charset=utf-8");
 
-    $TYPES = array("log", "service", "progressbar", "text");
+    $CA_BUNDLE = "./ca-bundle.crt";
+    $TYPES = array("log", "service", "progressbar", "text", "icloud");
     $PROTOCOLS = array("tcp", "http", "https", "icmp");
+    $ICLOUD_KEEP_FIELDS = array("name", "lastModified", "storageUsedInBytes", "productType");
+    $ICLOUD_CHECK_FIELDS = array("name", "productType", "id", "deviceUdid");
+    $ICLOUD_LOGIN_URL = "https://setup.icloud.com/setup/login_or_create_account";
+    $ICLOUD_ADDITIONAL_HEADERS = array("X-Mme-Client-Info: <PC> <Windows; 6.2.9200/SP0.0; W> <com.apple.AOSKit/129.5>");
 
+    function urlencode_credentials($credentials)
+    {
+        $new_credentials = $credentials;
+        if (strlen($credentials) > 0)
+        {
+            $credentials_arr = explode(":", $credentials);
+            if (count($credentials_arr) > 0)
+            {
+                $new_credentials = urlencode($credentials_arr[0]);
+            }
+            if (count($credentials_arr) > 1)
+            {
+                $new_credentials .= ":" . urlencode($credentials_arr[1]);
+            }
+        }
+        return $new_credentials;
+    }
+    
     function valid_type($type, $arr)
     {
         return in_array($type, $arr, TRUE);
@@ -123,6 +146,128 @@
         return array($success, $ping);
     }
     
+    function extract_icloud_tokens($contents)
+    {
+        $dsPrsID = "";
+        $mmeAuthToken = "";
+        $quotaURL = "";
+        if (preg_match('/mmeAuthToken\<\/key\>\s+\<string\>(.*?)\<\/string\>/', $contents, $matches))
+        {
+            $mmeAuthToken = $matches[1];
+        }
+        if (preg_match('/dsPrsID\<\/key\>\s+\<string\>(.*?)\<\/string\>/', $contents, $matches))
+        {
+            $dsPrsID = $matches[1];
+        }
+        if (preg_match('/quotaInfoURL\<\/key\>\s+\<string\>(.*?)\<\/string\>/', $contents, $matches))
+        {
+            $quotaURL = str_replace("getQuotaInfo", "storageUsageDetails", $matches[1]);
+        }
+        return array($dsPrsID, $mmeAuthToken, $quotaURL);
+    }
+    
+    function check_icloud_backup($credentials, $deviceName)
+    {
+        global $ICLOUD_KEEP_FIELDS, $ICLOUD_CHECK_FIELDS, 
+               $ICLOUD_ADDITIONAL_HEADERS, $ICLOUD_LOGIN_URL;
+           
+        $success = false;
+        $added_fields = array();
+        $last_modified = -1;
+        
+        list($pSuccess, $url, $login_or_create_account, $ping) = get_page($ICLOUD_LOGIN_URL, true, $credentials, false, $ICLOUD_ADDITIONAL_HEADERS, true);
+        if ($login_or_create_account !== false)
+        {
+            list($dsPrsID, $mmeAuthToken, $quotaURL) = extract_icloud_tokens($login_or_create_account);
+            
+            if (strlen($dsPrsID) > 0 && strlen($mmeAuthToken) > 0 && strlen($quotaURL) > 0)
+            {
+                list($pSuccess, $url, $storageUsageDetails, $ping) = get_page($quotaURL, true, $dsPrsID . ":" . $mmeAuthToken, false, 
+                                                array_merge(array("Content-Type: application/json"), $ICLOUD_ADDITIONAL_HEADERS), true);
+                                                
+                if ($storageUsageDetails !== false)
+                {
+                    $storageUsageDetails = json_decode($storageUsageDetails);
+                    if ($storageUsageDetails !== false)
+                    {
+                        if (property_exists($storageUsageDetails, "backups"))
+                        {
+                            $found = false;
+                            for ($i = 0; $i < count($storageUsageDetails->backups); $i++)
+                            {
+                                $backup = $storageUsageDetails->backups[$i];
+                                for ($j = 0; $j < count($ICLOUD_CHECK_FIELDS); $j++)
+                                {
+                                    $field_value = $backup->$ICLOUD_CHECK_FIELDS[$j];
+                                    if ($field_value == $deviceName)
+                                    {
+                                        $found = true;
+                                        break;
+                                    }
+                                }
+                                
+                                if ($found)
+                                {
+                                    for ($j = 0; $j < count($ICLOUD_KEEP_FIELDS); $j++)
+                                    {
+                                        if (property_exists($backup, $ICLOUD_KEEP_FIELDS[$j]))
+                                        {
+                                            $added_fields[$ICLOUD_KEEP_FIELDS[$j]] = $backup->$ICLOUD_KEEP_FIELDS[$j];
+                                        }
+                                    }
+                                    
+                                    if (property_exists($backup, "lastModified") && $backup->lastModified > 0)
+                                    {
+                                        $last_modified = $backup->lastModified / 1000;
+                                        $success = true;
+                                    }
+                                    
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return array($success, $last_modified, $added_fields);
+    }
+    
+    function get_page($url, $sslVerifyPeer=true, $credentials=false, $returnHeaders=true, $headers=array(), $basic=false)
+    {
+        global $CA_BUNDLE;
+        $success = false;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $sslVerifyPeer);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $sslVerifyPeer ? 2 : 0);
+        curl_setopt($ch, CURLOPT_HEADER, $returnHeaders);
+        curl_setopt($ch, CURLOPT_HTTPAUTH, $basic ? CURLAUTH_BASIC : CURLAUTH_ANY);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        if ($credentials)
+        {
+            curl_setopt($ch, CURLOPT_USERPWD, $credentials); 
+        }
+        if (count($headers) > 0)
+        {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); 
+        }
+        if (file_exists($CA_BUNDLE))
+        {
+            curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__) . "/" . $CA_BUNDLE); 
+        }
+        $ts = microtime(true);
+        $contents = curl_exec($ch);
+        if ($contents !== FALSE)
+        {
+            $success = true;
+        }
+        $ping = (microtime(true) - $ts) * 1000;
+        curl_close($ch);
+        return array($success, $url, $contents, $ping);
+    }
+    
     function get_http_page($protocol, $hostname)
     {        
         $ping = -1;
@@ -134,16 +279,7 @@
             $credentials = $_GET["credentials"];
             if (strlen($credentials) > 0)
             {
-                $credentials = explode(":", $credentials);
-                if (count($credentials) > 0)
-                {
-                    $url .= urlencode($credentials[0]);
-                }
-                if (count($credentials) > 1)
-                {
-                    $url .= ":" . urlencode($credentials[1]);
-                }
-                $url .= "@";
+                $url .= urlencode_credentials($_GET["credentials"]) . "@";
             }
         }
         
@@ -182,24 +318,7 @@
             $sslVerifyPeer = $_GET["sslVerifyPeer"] == "true";
         }
         
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $sslVerifyPeer);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $sslVerifyPeer ? 2 : 0);
-        curl_setopt($ch, CURLOPT_HEADER, true);
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-        $ts = microtime(true);
-        $contents = curl_exec($ch);
-        if ($contents !== FALSE)
-        {
-            $success = true;
-        }
-        $ping = (microtime(true) - $ts) * 1000;
-        curl_close($ch);
-        
-        return array($success, $url, $contents, $ping);
+        return get_page($url, $sslVerifyPeer);
     }
     
     $response = array("success" => false);
@@ -233,7 +352,17 @@
                 }
             }
             
-            if ($file_source)
+            if ($type == "icloud")
+            {
+                if (isset($_GET["credentials"]) && isset($_GET["deviceName"]))
+                {
+                    $deviceName = $_GET["deviceName"];
+                    $credentials = $_GET["credentials"];
+                    list($file_exists, $modification_date, $fields) = check_icloud_backup($credentials, $deviceName);
+                    $response = array_merge($response, $fields);
+                }
+            }
+            else if ($file_source)
             {
                 $filename = "./logs/" . $host . "-" . $monitor . ".log";
                 $file_exists = get_file_exists($filename);
@@ -336,6 +465,10 @@
                 {
                     $success = true;
                 }
+            }
+            else if ($type == "icloud")
+            {
+                $success = isset($file_exists) && $file_exists && !$is_stale;
             }
             
             $response["host"] = $host;

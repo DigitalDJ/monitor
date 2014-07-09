@@ -63,6 +63,17 @@
         "credentials": "username:password",
         "sslVerifyPeer": true
       }
+    },
+  "localhost": {
+    "hostname": "iosdevice.local",
+    "hostCanBeDown": 3600,
+    "monitors": {
+      "icloud-backup": {
+        "type": "icloud",
+        "credentials": "id@apple.com:password",
+        "deviceName": "Joe's iPhone",
+        "staleAfter": 86400
+      }
     }
   }
 }

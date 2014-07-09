@@ -520,10 +520,16 @@ function handle_json(data)
                     if (v1["type"] == "progressbar" ||
                         v1["type"] == "text" ||
                         v1["type"] == "service" ||
-                        v1["type"] == "log")
+                        v1["type"] == "log" ||
+                        v1["type"] == "icloud")
                     {
-                        var search_template = "#" + v1["type"] + "-template ." + v1["type"] + "-container";
-                        var append_to = ".panel-body-" + v1["type"];
+                        var actual_type = v1["type"];
+                        if (actual_type == "icloud")
+                        {
+                            actual_type = "log";
+                        }
+                        var search_template = "#" + actual_type + "-template ." + actual_type + "-container";
+                        var append_to = ".panel-body-" + actual_type;
                         
                         // clone, customize, append
                         var new_label = $(search_template).clone();

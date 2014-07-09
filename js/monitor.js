@@ -96,19 +96,22 @@ function handle_lastseen_success(data)
                         $.each(node_config["monitors"], function (k, v)
                         {
                             var label_id_node = $("#" + id + "-" + k);
-                            var labels = $(label_id_node).find(".label");
-                            
-                            // check all logs / resources that are file-check based
-                            if ($(labels).attr("title").indexOf("fileExists") > -1 && 
-                                $(labels).attr("class").indexOf("success") == -1)
+                            var label = $(label_id_node).find(".label");
+                            if (label.length > 0)
                             {
-                                // if not, host is still not ok
-                                stale_ok = false;
-                                // break
-                                return false;
+                                label = label[0];
+                                console.log(label);
+                                // check all logs / resources that are file-check based
+                                if ($(label).attr("title") && $(label).attr("title").indexOf("fileExists") > -1 && 
+                                    $(label).attr("class").indexOf("success") == -1)
+                                {
+                                    // if not, host is still not ok
+                                    stale_ok = false;
+                                    
+                                    // break
+                                    return false;
+                                }
                             }
-                            // keep looping
-                            return true;
                         });
                         
                         // if logs are ok, and host can be down, turn this host into success
@@ -436,7 +439,7 @@ function handle_refresh(e)
                 var label_id_node_labels = $(label_id_node).find(".label");
                 
                 $(label_id_node_labels).attr("class", replace_label_class($(label_id_node_labels).attr("class"), "danger"));
-                $(label_id_node_labels).attr("title", "GET: error");
+                $(label_id_node_labels).attr("title", "get: error");
                 
                 update_progress_bar(id_node);
             }.bind(this, node, k1));

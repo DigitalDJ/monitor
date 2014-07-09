@@ -26,7 +26,7 @@ If you want iCloud support to work, you must generate a ca-bundle for cURL and p
 
 Version
 -------
-0.1
+0.2
 
 Sample Configuration
 --------------------

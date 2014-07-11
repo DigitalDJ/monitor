@@ -100,7 +100,6 @@ function handle_lastseen_success(data)
                             if (label.length > 0)
                             {
                                 label = label[0];
-                                console.log(label);
                                 // check all logs / resources that are file-check based
                                 if ($(label).attr("title") && $(label).attr("title").indexOf("fileExists") > -1 && 
                                     $(label).attr("class").indexOf("success") == -1)
